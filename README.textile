@@ -1,0 +1,32 @@
+h1. LuaTwitter
+
+LuaTwitter is a Twitter API wrapper for Lua. It is managed by "Linus Sjögren":http://github.com/TheLinx
+The code is licensed under the CC0 license. Basically, public domain.
+
+h3(#toc). Table of Contents:
+# "Dependencies":#dependencies
+# "Including LuaTwitter in your script":#inclusion
+
+h2(#dependencies). Dependencies
+
+Here's a list of stuff LuaTwitter needs to run:
+* "LuaSocket":http://w3.impa.br/~diego/software/luasocket/
+* "LOOP":http://loop.luaforge.net/
+* "JSON4Lua":http://json.luaforge.net/
+All these should be automatically installed if you install LuaTwitter with LuaRocks.
+
+h2(#inclusion). Including LuaTwitter in your script
+
+Example:
+
+bc. require("twitter")
+myClient = twitter()
+status = myClient:showStatus{id = 123}
+print(status.text)
+
+LuaTwitter stays very close to the original Twitter API. All arguments passed to a function will be passed on as GET/POST data in the request.
+Therefore, to know what arguments you can use for what functions, use the "official Twitter documentation":http://dev.twitter.com/doc.
+
+A list of functions and their respective API resource is in init.lua (lines 20 -> 120).
+
+*Note:* LuaTwitter does not support any kind of authentication yet. Sorry...
