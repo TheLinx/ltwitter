@@ -1,6 +1,6 @@
 h1. LuaTwitter
 
-LuaTwitter is a Twitter API wrapper for Lua. It is managed by "Linus Sjögren":http://github.com/TheLinx
+LuaTwitter is a Twitter API wrapper for Lua. It is managed by "Linus Sjögren":http://github.com/TheLinx.
 The code is licensed under the CC0 license. Basically, public domain.
 
 h3(#toc). Table of Contents:
