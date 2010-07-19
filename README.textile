@@ -3,19 +3,16 @@ h1. LuaTwitter
 LuaTwitter is a Twitter API wrapper for Lua. It is managed by "Linus Sjögren":http://github.com/TheLinx.
 The code is licensed under the CC0 license. Basically, public domain.
 
-h3(#toc). Table of Contents:
-# "Dependencies":#dependencies
-# "Including LuaTwitter in your script":#inclusion
-
-h2(#dependencies). Dependencies
+h2. Dependencies
 
 Here's a list of stuff LuaTwitter needs to run:
 * "LuaSocket":http://w3.impa.br/~diego/software/luasocket/
 * "LOOP":http://loop.luaforge.net/
 * "JSON4Lua":http://json.luaforge.net/
+
 All these should be automatically installed if you install LuaTwitter with LuaRocks.
 
-h2(#inclusion). Including LuaTwitter in your script
+h2. Including LuaTwitter in your script
 
 Example:
 
