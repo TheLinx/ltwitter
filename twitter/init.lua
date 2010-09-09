@@ -8,7 +8,7 @@ local url = require("socket.url")
 local error,pairs = error,pairs
 local tableConcat = table.concat
 
---- LuaTwitter
+--- ltwitter
 -- TODO: OAuth
 -- @author Linus Sjögren <thelinx@unreliablepollution.net>
 -- @version 0.9.0
