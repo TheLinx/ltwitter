@@ -1,173 +1,158 @@
-local http = require("socket.http")
 local json = require("json")
-local ltn12 = require("ltn12")
-local oo = require("loop.base")
-local mime = require("mime")
-local url = require("socket.url")
+local oauth = require("OAuth")
 
-local error,pairs = error,pairs
+local assert,error,pairs,setmetatable,tostring = assert,error,pairs,setmetatable,tostring
 local tableConcat = table.concat
 
 --- ltwitter
--- TODO: OAuth
 -- @author Linus Sjögren <thelinx@unreliablepollution.net>
--- @version 0.9.0
+-- @version 1.0.0
 -- @license CC0
-module("twitter", oo.class, package.seeall)
-
--- local oauth
+module("twitter")
 
 resources = {
 -- Timeline resources
-	publicTimeline = {"get", "statuses/public_timeline"},
-	homeTimeline = {"get", "statuses/home_timeline"},
-	friendsTimeline = {"get", "statuses/friends_timeline"},
-	userTimeline = {"get", "statuses/user_timeline"},
-	mentions = {"get", "statuses/mentions"},
-	retweetedByMe = {"get", "statuses/retweeted_by_me"},
-	retweetedToMe = {"get", "statuses/retweeted_to_me"},
+	publicTimeline = {"GET", "statuses/public_timeline"},
+	homeTimeline = {"GET", "statuses/home_timeline"},
+	friendsTimeline = {"GET", "statuses/friends_timeline"},
+	userTimeline = {"GET", "statuses/user_timeline"},
+	mentions = {"GET", "statuses/mentions"},
+	retweetedByMe = {"GET", "statuses/retweeted_by_me"},
+	retweetedToMe = {"GET", "statuses/retweeted_to_me"},
 -- Tweets resources
-	retweetsOfMe = {"get", "statuses/retweets_of_me"},
-	showStatus = {"get", "statuses/show"},
-	updateStatus = {"post", "statuses/update"},
-	destroyStatus = {"post", "statuses/destroy"},
-	retweetStatus = {"post", "statuses/retweet/:id"},
-	retweets = {"get", "statuses/retweets"},
-	retweetedBy = {"get", "statuses/:id/retweeted_by"},
-	retweetedByIds = {"get", "statuses/:id/retweeted_by/ids"},
+	retweetsOfMe = {"GET", "statuses/retweets_of_me"},
+	showStatus = {"GET", "statuses/show"},
+	updateStatus = {"POST", "statuses/update"},
+	destroyStatus = {"POST", "statuses/destroy"},
+	retweetStatus = {"POST", "statuses/retweet/:id"},
+	retweets = {"GET", "statuses/retweets"},
+	retweetedBy = {"GET", "statuses/:id/retweeted_by"},
+	retweetedByIds = {"GET", "statuses/:id/retweeted_by/ids"},
 -- User resources
-	showUser = {"get", "users/show"},
-	lookupUsers = {"get", "users/lookup"},
-	searchUsers = {"get", "users/search"},
-	suggestedUserGroups = {"get", "users/suggestions"},
-	suggestedUsers = {"get", "users/suggestions/:slug"},
-	profileImage = {"get", "users/profile_image/:screen_name"},
-	friends = {"get", "statuses/friends"},
-	followers  = {"get", "statuses/followers"},
+	showUser = {"GET", "users/show"},
+	lookupUsers = {"GET", "users/lookup"},
+	searchUsers = {"GET", "users/search"},
+	suggestedUserGroups = {"GET", "users/suggestions"},
+	suggestedUsers = {"GET", "users/suggestions/:slug"},
+	profileImage = {"GET", "users/profile_image/:screen_name"},
+	friends = {"GET", "statuses/friends"},
+	followers  = {"GET", "statuses/followers"},
 -- Trends resources
-	trends = {"get", "trends"},
-	currentTrends = {"get", "trends/current"},
-	dailyTrends = {"get", "trends/daily"},
-	weeklyTrends = {"get", "trends/weekly"},
+	trends = {"GET", "trends"},
+	currentTrends = {"GET", "trends/current"},
+	dailyTrends = {"GET", "trends/daily"},
+	weeklyTrends = {"GET", "trends/weekly"},
 -- List resources
-	newList = {"post", ":user/lists"},
-	updateList = {"post", ":user/lists/:id"},
-	userLists = {"get", ":user/lists"},
-	showList = {"get", ":user/lists/:id"},
+	newList = {"POST", ":user/lists"},
+	updateList = {"POST", ":user/lists/:id"},
+	userLists = {"GET", ":user/lists"},
+	showList = {"GET", ":user/lists/:id"},
 	deleteList = {"delete", ":user/lists/:id"},
-	listTimeline = {"get", ":user/lists/:id/statuses"},
-	listMemberships = {"get", ":user/lists/memberships"},
-	listSubscriptions = {"get", ":user/lists/subscriptions"},
+	listTimeline = {"GET", ":user/lists/:id/statuses"},
+	listMemberships = {"GET", ":user/lists/memberships"},
+	listSubscriptions = {"GET", ":user/lists/subscriptions"},
 -- List Members resources
-	getListMembers = {"get", ":user/:list_id/members"},
-	addListMember = {"post", ":user/:list_id/members"},
+	GETListMembers = {"GET", ":user/:list_id/members"},
+	addListMember = {"POST", ":user/:list_id/members"},
 	delListMember = {"delete", ":user/:list_id/members"},
-	chkListMember = {"get", ":user/:list_id/members/:id"},
+	chkListMember = {"GET", ":user/:list_id/members/:id"},
 -- List Subscribers resources
-	getListSubscribers = {"get", ":user/:list_id/subscribers"},
-	addListSubscriber = {"post", ":user/:list_id/subscribers"},
+	GETListSubscribers = {"GET", ":user/:list_id/subscribers"},
+	addListSubscriber = {"POST", ":user/:list_id/subscribers"},
 	delListSubscriber = {"delete", ":user/:list_id/subscribers"},
-	chkListSubscriber = {"get", ":user/:list_id/subscribers/:id"},
+	chkListSubscriber = {"GET", ":user/:list_id/subscribers/:id"},
 -- Direct Messages resources
-	listMessages = {"get", "direct_messages"},
-	sentMessages = {"get", "direct_messages/sent"},
-	sendMessage = {"post", "direct_messages/new"},
-	removeMessage = {"post", "direct_messages/destroy"},
+	listMessages = {"GET", "direct_messages"},
+	sentMessages = {"GET", "direct_messages/sent"},
+	sendMessage = {"POST", "direct_messages/new"},
+	removeMessage = {"POST", "direct_messages/destroy"},
 -- Friendship resources
-	follow = {"post", "friendships/create/:id"},
-	unfollow = {"post", "friendships/destroy/:id"},
-	isFollowing = {"get", "friendships/exists"},
-	showRelation = {"get", "friendships/show"},
-	inFriendships = {"get", "friendships/incoming"},
-	outFriendships = {"get", "friendships/outgoing"},
+	follow = {"POST", "friendships/create/:id"},
+	unfollow = {"POST", "friendships/destroy/:id"},
+	isFollowing = {"GET", "friendships/exists"},
+	showRelation = {"GET", "friendships/show"},
+	inFriendships = {"GET", "friendships/incoming"},
+	outFriendships = {"GET", "friendships/outgoing"},
 -- Friends and Followers resources
-	following = {"get", "friends/ids"},
-	followers = {"get", "followers/ids"},
+	following = {"GET", "friends/ids"},
+	followers = {"GET", "followers/ids"},
 -- Account resources
-	rateLimitStatus = {"get", "account/rate_limit_status"},
-	updateDeliveryDevice = {"post", "account/update_delivery_device"},
-	updateProfileColors = {"post", "account/update_profile_colors"},
-	updateProfileImage = {"post", "account/update_profile_image"},
+	rateLimitStatus = {"GET", "account/rate_limit_status"},
+	updateDeliveryDevice = {"POST", "account/update_delivery_device"},
+	updateProfileColors = {"POST", "account/update_profile_colors"},
+	updateProfileImage = {"POST", "account/update_profile_image"},
 	-- holy shit take a look at that --> / <-- perfect line!!!
-	updateProfileBackground = {"post", "account/update_profile_background"},
-	updateProfile = {"post", "account/update_profile"},
+	updateProfileBackground = {"POST", "account/update_profile_background"},
+	updateProfile = {"POST", "account/update_profile"},
 -- Favorites resources
-	favorites = {"get", "favorites"},
-	addFavorite = {"post", "favorites/:id/create"},
-	delFavorite = {"post", "favorites/destroy"},
+	favorites = {"GET", "favorites"},
+	addFavorite = {"POST", "favorites/:id/create"},
+	delFavorite = {"POST", "favorites/destroy"},
 -- Notifications resources
-	enableNotifications = {"post", "notifications/follow"},
-	disableNotifications = {"post", "notifications/unfollow"},
+	enableNotifications = {"POST", "notifications/follow"},
+	disableNotifications = {"POST", "notifications/unfollow"},
 -- Block resources
-	addBlock = {"post", "blocks/create"},
-	delBlock = {"post", "blocks/destroy"},
-	chkBlock = {"get", "blocks/exists"},
-	blocking = {"get", "blocks/blocking"},
-	blockingIds = {"get", "blocks/blocking/ids"},
+	addBlock = {"POST", "blocks/create"},
+	delBlock = {"POST", "blocks/destroy"},
+	chkBlock = {"GET", "blocks/exists"},
+	blocking = {"GET", "blocks/blocking"},
+	blockingIds = {"GET", "blocks/blocking/ids"},
 -- Spam Reporting resources
-	reportSpam = {"post", "report_spam"},
+	reportSpam = {"POST", "report_spam"},
 -- Saved Searches resources
-	savedSearches = {"get", "saved_searches"},
-	doSavedSearch = {"get", "saved_searches/show"},
-	addSavedSearch = {"post", "saved_searches/create"},
-	delSavedSearch = {"post", "saved_searches/destroy"},
+	savedSearches = {"GET", "saved_searches"},
+	doSavedSearch = {"GET", "saved_searches/show"},
+	addSavedSearch = {"POST", "saved_searches/create"},
+	delSavedSearch = {"POST", "saved_searches/destroy"},
 -- Local Trends resources
-	availableLocations = {"get", "trends/available"},
-	locationTrends = {"get", "trends/locations/:woeid"},
+	availableLocations = {"GET", "trends/available"},
+	locationTrends = {"GET", "trends/locations/:woeid"},
 -- Geo resources
-	reverseGeocode = {"get", "geo/reverse_geocode"},
-	placeInfo = {"get", "geo/id/:place_id"}
+	reverseGeocode = {"GET", "geo/reverse_geocode"},
+	placeInfo = {"GET", "geo/id/:place_id"}
 }
 
-function __tostring()
-	return "Twitter Client"
-end
+local cl_mt = {
+  __index = function(tbl, method)
+    if not resources[method] then return nil end
+    local resource = resources[method]
+    local url = "https://api.twitter.com/1/"..resource[2]..".json"
+    return function(self, args)
+      args = args or {}
+      local url = url:gsub(":([%w_-]+)", function (s)
+        if args[s] then
+          local ret = args[s]
+          args[s] = nil
+          return ret
+        else
+          return s
+        end
+      end)
+      for k,v in pairs(args) do
+        args[k] = tostring(v)
+      end
+      local _, _, _, body = self.oauthclient:PerformRequest(resource[1], url, args)
+      return json.decode(body)
+    end
+  end
+}
 
-local function tabletopost(t)
-	local out = {}
-	for k,v in pairs(t) do
-		out[#out+1] = ("%s=%s"):format(url.escape(k), url.escape(tostring(v)))
-		out[#out+1] = "&"
-	end
-	out[#out] = nil
-	return tableConcat(out)
-end
-
-local function tabletoget(...)
-	local s = tabletopost(...)
-	if #s > 0 then
-		return ("?%s"):format(s)
-	else
-		return ""
-	end
-end
-
-local function request(page, method, data)
-	local url, source
-	if method:lower() == "get" then
-		url = ("http://api.twitter.com/1/%s.json%s"):format(page, tabletoget(data or {}))
-	else
-		url = ("http://api.twitter.com/1/%s.json"):format(page)
-		source = ltn12.sink.table(data or {})
-	end
-	local out = {}
-	local ret, code, headers = http.request{
-		url = url,
-		method = method:upper(),
-		source = source,
-		sink = ltn12.sink.table(out)
-	}
-	out = tableConcat(out)
-	if out:sub(1,2) == "<!" then
-		error("internal error! please report this bug at http://github.com/TheLinx/LuaTwitter/")
-	end
-	out = json.decode(out)
-	return out
-end
-
-for name,info in pairs(resources) do
-	_M[name] = function(self, arg)
-		local url = info[2]:gsub(":([%w_-]+)", arg)
-		return request(url, info[1], arg)
-	end
+function client(consumerKey, consumerSecret, tokenKey, tokenSecret, verifier)
+  local o = setmetatable({}, cl_mt)
+  assert(consumerKey and consumerSecret, "you need to specify a consumer key and a consumer secret!")
+  o.oauthclient = oauth.new(consumerKey, consumerSecret, {
+    RequestToken = "https://api.twitter.com/oauth/request_token";
+    AccessToken = "https://api.twitter.com/oauth/access_token";
+    AuthorizeUser = "https://api.twitter.com/oauth/authorize";
+  }, {
+    OAuthToken = tokenKey;
+    OAuthTokenSecret = tokenSecret;
+    OAuthVerifier = verifier;
+    UseAuthHeaders = true;
+    SignatureMethod = "HMAC-SHA1";
+  })
+  if not (tokenKey and tokenSecret) then
+    o.oauthclient:RequestToken()
+  end
+  return o
 end
