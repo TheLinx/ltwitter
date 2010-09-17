@@ -137,6 +137,13 @@ local cl_mt = {
   end
 }
 
+local function startLogin(self)
+  return self.oauthclient:BuildAuthorizationUrl()
+end
+local function confirmLogin(self, pin)
+  return self.oauthclient:GetAccessToken({oauth_verifier = pin})
+end
+
 function client(consumerKey, consumerSecret, tokenKey, tokenSecret, verifier)
   local o = setmetatable({}, cl_mt)
   assert(consumerKey and consumerSecret, "you need to specify a consumer key and a consumer secret!")
@@ -154,5 +161,7 @@ function client(consumerKey, consumerSecret, tokenKey, tokenSecret, verifier)
   if not (tokenKey and tokenSecret) then
     o.oauthclient:RequestToken()
   end
+  o.startLogin = startLogin
+  o.confirmLogin = confirmLogin
   return o
 end
